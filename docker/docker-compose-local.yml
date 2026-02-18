@@ -1,0 +1,51 @@
+version: '3.7'
+services:
+  postgres:
+    image: postgres:11-alpine
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  local-runner:
+    platform: linux/amd64
+    image: 164810850900.dkr.ecr.eu-west-1.amazonaws.com/mwaa-local:2.7.2.dev1
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      - LOAD_EX=n
+      - EXECUTOR=Local
+      - AIRFLOW_ENV_NAME=local_dev
+      - AIRFLOW__CORE__LAZY_LOAD_PLUGINS=False
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    volumes:
+      - "${PWD}/airflow_dags/:/usr/local/airflow/dags/"
+      - "${PWD}/metrics_dbt/tps/:/usr/local/airflow/dags/tps/metrics_dbt/scripts/"
+      - "${PWD}/airflow_dags/tps/metrics_dbt/config/dev/config.py:/usr/local/airflow/dags/tps/metrics_dbt/config/config.py"
+      - "${PWD}/metrics_dbt/bi/:/usr/local/airflow/dags/bi/metrics_dbt/scripts/"
+      - "${PWD}/metrics_dbt/wbr/:/usr/local/airflow/dags/wbr/metrics_dbt/scripts/"
+      - "${HOME}/.aws:/usr/local/airflow/.aws"
+      - "${PWD}/metrics_dbt/tps/config/dev/dbt_project.yml:/usr/local/airflow/dags/tps/metrics_dbt/scripts/dbt_project.yml"
+      - "${PWD}/metrics_dbt/tps/models:/usr/local/airflow/dags/tps/metrics_dbt/scripts/models"
+      - "${PWD}/metrics_dbt/tps/macros:/usr/local/airflow/dags/tps/metrics_dbt/scripts/macros"
+      - "${PWD}/metrics_dbt/tps/config/dev/schema.yml:/usr/local/airflow/dags/tps/metrics_dbt/scripts/models/schema.yml"
+      - "${PWD}/metrics_dbt/tps/config/dev/source.yml:/usr/local/airflow/dags/tps/metrics_dbt/scripts/models/source.yml"
+      - "${PWD}/metrics_dbt/tps/config/common/packages.yml:/usr/local/airflow/dags/tps/metrics_dbt/scripts/packages.yml"
+    ports:
+      - "8080:8080"
+    command: local-runner
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 90s
+      retries: 3
+    env_file:
+      - ./config/.env.localrunner

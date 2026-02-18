@@ -1,0 +1,10 @@
+--constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.7.2/constraints-3.11.txt"
+
+apache-airflow-providers-snowflake==5.0.1
+###apache-airflow-providers-mysql==5.3.1
+polling==0.3.2
+botocore==1.31.17
+airflow-dbt==0.4.0
+astronomer-cosmos==1.5.1
+pandas==2.1.1
+dbt-trino==1.7.1

@@ -1,0 +1,14 @@
+ENV = 'dev'
+TARGET_DATABASE = "my_company_data"
+TARGET_SCHEMA = "dev_data_metrics_layer"
+PROJECT_PATH = "/usr/local/airflow/dags/wbr/metrics_dbt/scripts/"
+MODELS_LIST = ['acquisition', 'conversion', 'monetisation', 'retention', 'supply', 'anaplan_budget_data_daily']
+CONN_ID = 'dev_analytics_framework_con'
+MKT_TBL = 'marketing_refresh_daily'
+MKT_TBL_TASK_ID = 'marketing_mart.marketing_mart_end'
+CUST_TBL = 'customer_model'
+USER_TBL = 'user_growth_refactor_iceberg_daily'
+FM_TBL = 'orderlines_fm_update'
+DATA_TAG = ["tag:datamart"]
+OVR_VIEW = ["tag:overview"]
+BREAKOUT_REPORT = ["tag:breakout_report"]

@@ -1,0 +1,86 @@
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'analytics_framework'
+version: '1.0.0'
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'analytics_framework_con'
+
+# variales
+
+vars:
+  # The `start_date` variable will be accessible in all resources
+
+  fm_products:
+    source_system: ('25KV', 'SEASONS', 'SGP', 'TRACS')
+
+  # The variables for the acquisition mart
+  week_commencing_diff: 1
+  acquisition_mart:
+    business_channel: 'Leisure'
+    managed_group_id: ('20', '42')
+    region: ('France', 'Germany', 'Inbound', 'International', 'Italy', 'RoE', 'Spain', 'UK>EU', 'Foreign Travel')
+    segment: 'latest'
+    product_type_code: ('TRAVEL', 'SEASONS', 'SEASONS_FLEXI','RAILCARD')
+
+  # The variables for the conversion mart
+  conversion_mart:
+    business_channel: 'Leisure'
+    managed_group_id: ('20', '42')
+    region: ('France', 'Germany', 'Inbound', 'International', 'Italy', 'RoE', 'Spain', 'UK>EU', 'Foreign Travel')
+    segment: 'latest'
+    product_type_code: ('TRAVEL', 'SEASONS', 'SEASONS_FLEXI','RAILCARD')
+
+  # The variables for the monetisation mart
+  monetisation_mart:
+    business_channel: 'Leisure'
+    managed_group_id: ('20', '42')
+    region: ('France', 'Germany', 'Inbound', 'International', 'Italy', 'RoE', 'Spain', 'UK>EU', 'Foreign Travel')
+    segment: 'latest'
+    product_type_code: ('TRAVEL', 'SEASONS', 'SEASONS_FLEXI','RAILCARD')
+
+  # The variables for the retention mart
+  retention_mart:
+    business_channel: 'Leisure'
+    managed_group_id: ('20', '42')
+    region: ('France', 'Germany', 'Inbound', 'International', 'Italy', 'RoE', 'Spain', 'UK>EU', 'Foreign Travel')
+    segment: 'latest'
+    product_type_code: ('TRAVEL', 'SEASONS', 'SEASONS_FLEXI','RAILCARD')
+
+  # The variables for the supply mart
+  supply_mart:
+    business_channel: 'Leisure'
+    managed_group_id: ('20', '42')
+    region: ('France', 'Germany', 'Inbound', 'International', 'Italy', 'RoE', 'Spain', 'UK>EU', 'Foreign Travel')
+    segment: 'latest'
+    product_type_code: ('TRAVEL', 'SEASONS', 'SEASONS_FLEXI','RAILCARD')
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for example, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# Configuring models
+# Full documentation: https://docs.getdbt.com/docs/configuring-models
+
+# In this example config, we tell dbt to build all models in the example/
+# directory as views. These settings can be overridden in the individual model
+# files using the `{{ config(...) }}` macro.
+models:
+  analytics_framework:
+    # Config indicated by + and applies to all files under models/example/
+    # Note: The materialization config in this section is considered,
+    # but it may be overwritten by SQL configurations in individual models
+    # or settings in schema.yml files.
+      +materialized: incremental  # Default materialization is set to 'incremental'

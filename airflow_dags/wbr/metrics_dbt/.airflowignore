@@ -1,0 +1,2 @@
+# Ignore processing of files that does not start with 'dag'
+^((?!dag).)*$

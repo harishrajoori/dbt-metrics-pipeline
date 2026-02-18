@@ -1,0 +1,141 @@
+pipeline {
+    // Define the agent
+    agent { label 'experimentation' }
+    // triggers { githubPush() }
+    // Define parameters for the pipeline
+    parameters { gitParameter(name: 'TARGETED_BRANCH', type: 'PT_BRANCH_TAG', defaultValue: 'NONE')
+                 choice(name: 'PIPELINE_FOLDER', choices: ['wbr', 'tps'], description: 'Choose the folder which needs to be deployed')}
+    options {
+         ansiColor('xterm')
+    }
+    environment {
+        // Determine the branch
+        BUILD_BRANCH = chooseBranch(params.TARGETED_BRANCH, env.GIT_BRANCH)
+        // Get the S3 bucket name based on the branch
+        BUCKET = getBucketName(env.BUILD_BRANCH)
+        // Determine the environment (data or staging) based on the branch
+        REPO_ENV = getEnv(env.BUILD_BRANCH)
+        GIT_REPO_NAME = sh(returnStdout: true, script: 'git config remote.origin.url').trim().tokenize('/').last().split("\\.git")[0].toString()
+        // Get the deployment ID based on the branch
+        DEPLOY_ID = getDeployId(env.BUILD_BRANCH)
+        PIPELINE = "${params.PIPELINE_FOLDER}"
+    }
+
+
+    stages {
+        stage('Do a checkout') {
+            steps {
+                // Checkout the specified branch from the Git repository
+                checkout(
+                    [$class: 'GitSCM',
+                    userRemoteConfigs: [[credentialsId: "github-app-dataengineering", url: "https://github.com/my-username/data-pipeline-framework"]],
+                    branches: [[name: env.BUILD_BRANCH]],
+                    extensions: [[$class: 'CleanCheckout']]]
+                )
+                sh "ls"
+            }
+        }
+        stage("Set currentBuild") {
+                    steps {
+                        script {
+                            // Set the display name for the current build to the branch name
+                            currentBuild.displayName = "${ env.BUILD_BRANCH }"
+                        }
+                    }
+                }
+        stage("Copy To S3"){
+            steps {
+                script {
+                    withAWS(role: 'roleJenkinsDataAutomation', roleAccount: '123456789012', externalId: 'jenkinsAssumingRole')
+                    {
+                        sh 'ls -l'
+                        // cp -r will just copy the files/folders which are modified , it will compare the target filde timestamp with source file timestamp
+                        sh(returnStdout: true, script: '''#!/bin/bash
+                                                            // copying the dags
+                                                            aws s3 sync /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/airflow_dags/${PIPELINE}/metrics_dbt/ s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/ --exclude "*config/*" --delete
+                                                            // copying the dags config
+                                                            aws s3 cp /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/airflow_dags/${PIPELINE}/metrics_dbt/config/${REPO_ENV}/config.py s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/config/config.py
+                                                            // copying the dbt sql files
+                                                            aws s3 sync /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/metrics_dbt/${PIPELINE}/ s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/scripts/ --exclude "*config/*" --exclude "*ddl/*"
+                                                            // copying the common yml files to script
+                                                            aws s3 sync /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/metrics_dbt/${PIPELINE}/config/common/ s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/scripts/ --exclude "schema.yml" --exclude "source.yml"
+                                                            // copying the staging/data yaml config files
+                                                            aws s3 sync /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/metrics_dbt/${PIPELINE}/config/${REPO_ENV}/ s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/scripts/ --exclude "schema.yml" --exclude "source.yml"
+                                                            // copying the schema file to models folder
+                                                            aws s3 cp /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/metrics_dbt/${PIPELINE}/config/${REPO_ENV}/schema.yml s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/scripts/models/schema.yml
+                                                            // copying the source file to models folder
+                                                            aws s3 cp /home/ec2-user/workspace/experimentation/data\\ pipelines/data-metrics-layer/metrics_dbt/${PIPELINE}/config/${REPO_ENV}/source.yml s3://${BUCKET}/mwaa-2.7.2/dags/${PIPELINE}/metrics_dbt/scripts/models/source.yml
+                                                        '''.stripIndent())
+                    }
+                }
+            }
+        }
+        stage("Post To Plandek"){
+            when {
+                    allOf {
+                        expression { env.BUILD_BRANCH =~ /\d+\.\d+\.\d+/ }
+                    }
+                }
+            steps {
+                script {
+                // Post build status and details to a Plandek endpoint
+                sh "curl -X POST https://api.gateway.aws/deployment \
+                       -H 'Content-Type: application/json' \
+                        -d '{\"pipeline\":\"${GIT_REPO_NAME}\", \"commits\":\"${GIT_COMMIT}\", \
+                         \"build\":\"${env.BUILD_BRANCH}\", \"status\": \"success\", \"calculate_commits_in_build\":\"false\" ,\
+                          \"branch_name\":\"${env.BUILD_BRANCH}\"}'"
+                }
+            }
+        }
+    }
+}
+
+
+// Function to get the S3 bucket name based on the branch
+def getBucketName(git_branch) {
+
+    if (git_branch =~ /\d+\.\d+\.\d+/) {
+        return "my-prod-mwaa-bi";
+    } else if (git_branch.equals("origin/staging")) {
+        return "my-staging-mwaa-bi";
+    } else if (git_branch.startsWith("origin/release")) {
+        return "my-staging-mwaa-bi";
+    } else if (git_branch.equals("origin/master")) {
+        return "my-prod-mwaa-bi";
+    }
+    }
+
+// Function to get the environment (data or staging) based on the branch
+def getEnv(git_branch) {
+
+    if (git_branch =~ /\d+\.\d+\.\d+/) {
+        return "data";
+    } else if (git_branch.equals("origin/staging")) {
+        return "staging";
+    } else if (git_branch.startsWith("origin/release")) {
+        return "staging";
+    }
+    else if (git_branch.equals("origin/master")) {
+        return "prod";
+    }
+    }
+
+// Function to get the deployment ID from the branch name
+def getDeployId(git_branch) {
+
+    if (git_branch =~ /\d+\.\d+\.\d+/) {
+        split_tag = git_branch.split("/");
+        return split_tag[split_tag.length - 1]
+    } else {
+        return git_branch.replace("origin/","");
+    }
+}
+
+// Function to choose the branch to use for the build
+def chooseBranch(target, automatic) {
+    if (target.equals("NONE")) {
+            return automatic
+        } else {
+            return target
+        }
+}

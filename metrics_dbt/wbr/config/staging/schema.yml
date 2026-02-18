@@ -1,0 +1,483 @@
+version: 2
+
+models:
+
+  # model definition and config params for acquisition data mart
+  - name: acquisition_mart
+    description: "acquisition data mart"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        unique_key: [ 'date_scope', 'financial_year', 'week_number', 'year_month_day', 'week_commencing_date',
+                      'product_pl', 'region', 'category', 'sub_category', 'metric_name' ]
+        views_enabled: false
+        merge_update_columns: [ 'metric_value', 'last_modified' ]
+        on_schema_change: append_new_column
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "datamarts" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'category'
+            - 'sub_category'
+            - 'metric_name'
+      - validate_foreign_travel_acquisition:
+          config:
+            severity: warn
+# ---------- DAY-only tests ----------
+      - reconcile_acq_mart_mm_day:
+          config:
+            enabled: "{{ env_var('exe_type') == 'day' }}"
+            tags: ['validate_day']
+
+      - reconcile_incremental_gross_sales_day:
+          config:
+            enabled: "{{ env_var('exe_type') == 'day' }}"
+            tags: ['validate_day']
+
+      - reconcile_marketing_spend_day:
+          config:
+            enabled: "{{ env_var('exe_type') == 'day' }}"
+            tags: ['validate_day']
+
+      # ---------- WEEK-only tests ----------
+      - reconcile_acq_mart_mm_week:
+          config:
+            enabled: "{{ env_var('exe_type') == 'week' }}"
+            tags: ['validate_week']
+
+      - reconcile_incremental_gross_sales_week:
+          config:
+            enabled: "{{ env_var('exe_type') == 'week' }}"
+            tags: ['validate_week']
+
+      - reconcile_marketing_spend_week:
+          config:
+            enabled: "{{ env_var('exe_type') == 'week' }}"
+            tags: ['validate_week']
+
+      # ---------- SUMMARY / FYTD-only tests ----------
+      - reconcile_acq_mart_mm_summary:
+          config:
+            enabled: "{{ env_var('exe_type') == 'fytd' }}"
+            tags: ['validate_fytd']
+
+      - reconcile_incremental_gross_sales_summary:
+          config:
+            enabled: "{{ env_var('exe_type') == 'fytd' }}"
+            tags: ['validate_fytd']
+
+      - reconcile_marketing_spend_summary:
+          config:
+            enabled: "{{ env_var('exe_type') == 'fytd' }}"
+            tags: ['validate_fytd']
+
+    columns:
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+      - name: category
+        tests:
+          - not_null
+      - name: sub_category
+        tests:
+          - not_null
+
+
+  # model definition and config params for conversion data mart
+  - name: conversion_mart
+    description: "conversion data mart"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        unique_key: [ 'date_scope', 'financial_year', 'week_number', 'year_month_day', 'week_commencing_date',
+                      'product_pl', 'region', 'category', 'sub_category', 'metric_name' ]
+        views_enabled: false
+        merge_update_columns: [ 'metric_value', 'last_modified' ]
+        on_schema_change: append_new_column
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "datamarts" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'category'
+            - 'sub_category'
+            - 'metric_name'
+    columns:
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+      - name: category
+        tests:
+          - not_null
+      - name: sub_category
+        tests:
+          - not_null
+
+
+  # model definition and config params for monetisation data mart
+  - name: monetisation_mart
+    description: "monetisation table"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        unique_key: [ 'date_scope', 'financial_year', 'week_number', 'year_month_day', 'week_commencing_date',
+                      'product_pl', 'region', 'category', 'sub_category', 'metric_name' ]
+        views_enabled: false
+        merge_update_columns: [ 'metric_value', 'last_modified' ]
+        on_schema_change: append_new_column
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "datamarts" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'category'
+            - 'sub_category'
+            - 'metric_name'
+      - reconcile_ads_revenue
+      - reconcile_ads_impressions
+      - reconcile_ads_ctr
+      - reconcile_ads_cpm
+      - reconcile_booking_fee_coverage
+      - reconcile_booking_fee_take_rate
+      - reconcile_booking_fee_revenue
+      - reconcile_refund_fee_coverage
+      - reconcile_refund_fee_take_rate
+      - reconcile_refund_fee_revenue
+      - reconcile_coj_fee_coverage
+      - reconcile_coj_fee_take_rate
+      - reconcile_coj_fee_revenue
+      - reconcile_commission_take_rate
+      - reconcile_commission_revenue
+      - reconcile_ancillary_take_rate
+      - reconcile_ancillary_revenue
+      - reconcile_mcp_coverage
+      - reconcile_mcp_take_rate
+      - reconcile_mcp_revenue
+      - reconcile_booking_dot_com_bookings
+#      - reconcile_booking_dot_com_impressions
+#      - reconcile_booking_dot_com_ctr
+    columns:
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+      - name: category
+        tests:
+          - not_null
+      - name: sub_category
+        tests:
+          - not_null
+
+
+  # model definition and config params for retention data mart
+  - name: retention_mart
+    description: "retention table"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        unique_key: [ 'date_scope', 'financial_year', 'week_number', 'year_month_day', 'week_commencing_date',
+                      'product_pl', 'region', 'category', 'sub_category', 'metric_name' ]
+        views_enabled: false
+        merge_update_columns: [ 'metric_value', 'last_modified' ]
+        on_schema_change: append_new_column
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "datamarts" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'category'
+            - 'sub_category'
+            - 'metric_name'
+      - reconcile_growth_accounting_early_life
+      - reconcile_growth_accounting_retained
+      - reconcile_growth_accounting_resurrected
+      - reconcile_user_journey_leisure
+      - reconcile_user_journey_commute
+      - reconcile_user_journey_summary
+    columns:
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+      - name: category
+        tests:
+          - not_null
+      - name: sub_category
+        tests:
+          - not_null
+
+
+  # model definition and config params for supply data mart
+  - name: supply_mart
+    description: "supply table"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        unique_key: [ 'date_scope', 'financial_year', 'week_number', 'year_month_day', 'week_commencing_date',
+                      'product_pl', 'region', 'category', 'sub_category', 'metric_name' ]
+        views_enabled: false
+        merge_update_columns: [ 'metric_value', 'last_modified' ]
+        on_schema_change: append_new_column
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "datamarts" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'category'
+            - 'sub_category'
+            - 'metric_name'
+      # below dq checks are meant to validate data completeness using a volumetric percentage
+      - validate_category_data_completeness
+      - validate_sub_category_data_completeness
+    columns:
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null:
+              config:
+                # focus on only the records that are loaded as part of the current run
+                where: "date(last_modified) = current_date"
+          - dbt_expectations.expect_column_distinct_count_to_equal:
+              value: 3
+          - accepted_values:
+              # consider all values in the column including the ones from the current run
+              values: ['EU', 'UK', 'UK & EU']
+      - name: region
+        tests:
+          - not_null
+      - name: category
+        tests:
+          - not_null
+      - name: sub_category
+        tests:
+          - not_null
+      - name: metric_value
+        tests:
+          - not_null
+
+  # model definition and config params for l5 overview table
+  - name: wbr_overview_status
+    description: "l5 overview table"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        on_schema_change: append_new_column
+        views_enabled: false
+        unique_key: [ 'date_scope', 'financial_year', 'week_number', 'year_month_day', 
+                      'week_commencing_date','product_pl','region', 'metric_name' ]
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "overview" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'metric_name'
+      - reconcile_acq_mart_wbr_overview_status
+    columns:
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+
+  # model definition and config params for anaplan daily budget data table
+  - name: anaplan_budget_data_daily_mart
+    description: "anaplan daily budget data table"
+    config:
+      materialized: incremental
+      incremental_strategy: merge
+      on_schema_change: append_new_column
+      views_enabled: false
+      unique_key: [ 'date_scope', 'version', 'year_month_day', 'week_in_fin_year', 'week_commencing_date', 'region' ]
+      merge_update_columns: [ 'gross_sales_budget', 'net_sales_budget', 'new_customers_budget', 'gross_transactions_budget', 'average_transaction_value_budget', 'marketing_spend_budget', 'total_revenue_budget', 'total_costs_budget', 'gross_margin_budget', 'gm_minus_pms_budget', 'last_modified' ]
+      properties: {
+        "partitioning": "ARRAY['week_commencing_date']",
+        "type": "'ICEBERG'",
+        "format": "'PARQUET'"
+      }
+      tags: [ "datamarts" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'date_scope'
+            - 'version'
+            - 'year_month_day'
+            - 'week_in_fin_year'
+            - 'week_commencing_date'
+            - 'region'
+    columns:
+      - name: year_month_day
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+
+  # model definition and config params for l5 breakout table
+  - name: wbr_breakout_report
+    description: "l5 wbr breakout report table"
+    config:
+        materialized: incremental
+        incremental_strategy: merge
+        on_schema_change: append_new_column
+        views_enabled: false
+        unique_key: [ 'metric_mart_name', 'date_scope', 'financial_year', 'week_number', 'year_month_day',
+                      'week_commencing_date','product_pl','region', 'metric_name', 'category', 'sub_category' ]
+        properties: {
+          "partitioning": "ARRAY['week_commencing_date']",
+          "type": "'ICEBERG'",
+          "format": "'PARQUET'"
+        }
+        tags: [ "breakout_report" ]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - 'metric_mart_name'
+            - 'date_scope'
+            - 'financial_year'
+            - 'week_number'
+            - 'year_month_day'
+            - 'week_commencing_date'
+            - 'product_pl'
+            - 'region'
+            - 'metric_name'
+            - 'category'
+            - 'sub_category'
+      - reconcile_acq_mart_wbr_breakout_report
+    columns:
+      - name: metric_mart_name
+        tests:
+          - not_null
+      - name: metric_name
+        tests:
+          - not_null
+      - name: week_commencing_date
+        tests:
+          - not_null
+      - name: product_pl
+        tests:
+          - not_null
+      - name: region
+        tests:
+          - not_null
+      - name: category
+        tests:
+          - not_null
+      - name: sub_category
+        tests:
+          - not_null

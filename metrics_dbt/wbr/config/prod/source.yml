@@ -1,0 +1,49 @@
+version: 2
+
+sources:
+  - name: bi_dwh
+    database: my_company_data
+    schema: bi_dwh
+    tables:
+      - name: fm_products
+      - name: marketing_mart
+      - name: customer_accounts
+      - name: user_growth
+      - name: journey_searches
+      - name: journey_search_summary
+
+  - name: bi_dwh_users
+    database: my_company_data
+    schema: bi_dwh_users
+    tables:
+      - name: growth_accounting_summary
+
+  - name: data_metrics_layer
+    database: my_company_data
+    schema: prod_data_metrics_layer
+    tables:
+      - name: calendar_dates_lookup
+      - name: country_codes_lookup
+      - name: acquisition_mart
+      - name: product_pl_region_map
+
+  - name: bi_dwh_finance
+    database: my_company_data
+    schema: bi_dwh_finance
+    tables:
+      - name: v_anaplan_budget_data
+
+  - name: bi_dwh_ref_data
+    database: my_company_data
+    schema: bi_dwh_ref_data
+    tables:
+      - name: bi_d_calendar
+  # THIS IS ALSO A TEMPORARY SOURCE UNTIL A DATA PIPELINE IS IMPLEMENTED TO FETCH BUDGET DATA
+  # ALSO A TEMPORARY SOURCE FOR fm_products UNTIL REFUNDS DATA CHANGES ARE PUSHED TO PROD AND BACKFILLING IS DONE
+  - name: tmp_bi_dwh # changes as per dat-1641 (create 2 different copies of budget allocation table)
+    database: my_company_data
+    schema: bi_dwh # changes as per dat-1641 (create 2 different copies of budget allocation table)
+    tables:
+      - name: budget_allocation
+      - name: fm_products
+      
